@@ -1,0 +1,10 @@
+# 大型未使用的影片素材（超過 GitHub 100MB 上限、網站未使用）
+*.mp4
+*.mov
+
+# macOS / 編輯器
+.DS_Store
+.claude/
+
+# 暫存圖（非網站素材）
+ChatGPT*.png

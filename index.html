@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TAIWAN AIRLINES — 直飛倫敦 London Calling</title>
+<style>
+  :root{
+    --brand:#6b2c92;      /* 品牌紫（蝴蝶蘭）*/
+    --brand-deep:#4e2076; /* 深紫（hover）*/
+    --accent:#f59e0b;     /* 強調金（黃金時刻，與紫互補）*/
+    --ink:#0b1726;
+    --paper:#ffffff;
+    --font: "Helvetica Neue", "PingFang TC", "Microsoft JhengHei", system-ui, sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{height:100%}
+  body{font-family:var(--font);color:#fff;background:#0b1726;overflow-x:hidden}
+
+  /* 固定的 3D 畫布，整段旅程都在這裡渲染 */
+  #scene{position:fixed;inset:0;z-index:0}
+
+  /* 捲動高度：給足空間讓鏡頭線跑完 */
+  #scroll-track{position:relative;z-index:2;height:620vh;pointer-events:none}
+
+  /* ── 機艙舷窗（多層邊框 + 點點壁 + 光暈，覆蓋在 3D 之上）── */
+  #cabin{
+    position:fixed;inset:0;z-index:1;pointer-events:none;transform-origin:50% 50%;
+    /* 寬度依螢幕縮放；高度一律由寬度推算 → 比例永遠固定，縮小螢幕也不變形 */
+    --ratio:0.70;                          /* 玻璃開口 寬/高 */
+    --ow:min(46vh,86vw,380px);
+    --oh:calc(var(--ow) / var(--ratio));
+  }
+  /* 帶孔洞的點點機艙壁 + 窗周圍柔光暈 */
+  #cabin .wall{
+    position:absolute;inset:0;
+    background:
+      radial-gradient(circle at 50% 50%, rgba(255,255,255,.07) .6px, transparent 1.4px) 0 0/9px 9px,
+      radial-gradient(ellipse 60% 64% at 50% 49%, #3a424e 0%, #1d232d 42%, #0a0e16 78%);
+    -webkit-mask:radial-gradient(ellipse calc(var(--ow)*.6) calc(var(--oh)*.57) at 50% 50%, #0000 0 86%, #000 99%);
+            mask:radial-gradient(ellipse calc(var(--ow)*.6) calc(var(--oh)*.57) at 50% 50%, #0000 0 86%, #000 99%);
+  }
+  /* 頂部小氣孔／遮陽板拉柄 */
+  #cabin .shadepanel{ /* 遮陽板：與把手同層，蓋在銀框「之上」，深色與把手連成一體 */
+    position:absolute;left:50%;top:calc(50% - var(--oh)/2 - 55px);transform:translateX(-50%);
+    width:calc(var(--ow)*0.90);height:calc(var(--oh)*0.15);
+    background:linear-gradient(#434a55 0%, #353c46 80%, #2c333d 91%, #555d67 96%, #2a313a 100%);
+    border-radius:50% 50% 48% 48% / 99% 99% 16% 16%;   /* 上緣大圓弧，貼合窗框圓頂 */
+    box-shadow:0 6px 14px rgba(0,0,0,.4);
+  }
+  #cabin .vent{ /* 遮陽板把手圓頂：底部坐在遮陽板上，連成一體 */
+    position:absolute;left:50%;top:calc(50% - var(--oh)/2 - 65px);transform:translateX(-50%);
+    width:calc(var(--ow)*.34);height:32px;
+    border-radius:50% 50% 44% 44% / 82% 82% 24% 24%;   /* 上圓頂、下較平 */
+    background:radial-gradient(ellipse 115% 150% at 50% 20%, #5d656f 0%, #3a414b 52%, #1f252d 100%);
+    box-shadow:0 5px 12px rgba(0,0,0,.42), inset 0 2px 3px rgba(255,255,255,.22);
+  }
+  #cabin .vent::after{ /* 中央凹孔（凹下去，非突起）*/
+    content:"";position:absolute;left:50%;top:38%;transform:translate(-50%,-50%);
+    width:12px;height:12px;border-radius:50%;
+    background:radial-gradient(circle at 50% 72%, #5a626d 0%, #171c23 92%);
+    box-shadow:inset 0 2px 3px rgba(0,0,0,.78), inset 0 -1px 1px rgba(255,255,255,.2);
+  }
+  /* 多層斜角邊框：銀色內框 → 深灰外殼；玻璃中心透明（透出 3D 天空）*/
+  #cabin .frame{
+    position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
+    width:var(--ow);height:var(--oh);border-radius:44%/38%;
+    box-shadow:
+      inset 0 5px 18px rgba(0,0,0,.42),               /* 玻璃內凹陰影 */
+      0 0 0 2px #1b2026,                              /* 玻璃邊密封條（深）*/
+      0 0 0 5px rgba(250,252,254,.96),                /* 最亮鉻色內環 */
+      0 0 0 13px #e2e7ed,                             /* 鉻環 */
+      0 0 0 17px #bcc4cd,                             /* 銀 */
+      0 0 0 21px #939ba5,                             /* 深銀階 */
+      0 0 0 25px #6b727c,                             /* 過渡 */
+      0 0 0 30px #4a515b,
+      0 0 0 50px #383f49,                             /* 深灰外殼 */
+      0 0 0 54px #20262e,                             /* 外殼邊緣 */
+      0 24px 55px rgba(0,0,0,.5),                     /* 投影 */
+      0 0 26px 3px rgba(205,225,250,.6),              /* 貼近窗框的亮邊 */
+      0 0 60px 10px rgba(170,200,238,.62),            /* 藍白光暈內層（更亮）*/
+      0 0 140px 40px rgba(150,182,222,.34);           /* 光暈外層擴散（畫上去，不透光，不會漏出飛機）*/
+    border:1px solid rgba(255,255,255,.14);
+  }
+  /* 玻璃：裁切遮陽板與反光 */
+  #cabin .shade{
+    position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
+    width:var(--ow);height:var(--oh);border-radius:44%/38%;overflow:hidden;
+  }
+  #cabin .shade::after{ /* 玻璃反光：左右寬、上下窄的橢圓高光帶 */
+    content:"";position:absolute;inset:0;
+    background:
+      radial-gradient(ellipse 90% 15% at 48% 27%, rgba(255,255,255,.26), transparent 72%),
+      radial-gradient(ellipse 74% 10% at 52% 58%, rgba(255,255,255,.11), transparent 76%);
+  }
+
+  /* ── ④ 倫敦照片蒙太奇 ── */
+  #london{position:fixed;inset:0;z-index:2;pointer-events:none;overflow:hidden}
+  #london .ph{position:absolute;inset:0;background-size:cover;background-position:center;
+    opacity:0;will-change:opacity,transform;transition:opacity .12s linear}
+  /* 遠 → 近：高空全景 → 塔橋中景 → 大笨鐘特寫（呼應飛機下降接近）*/
+  #ph1{background-image:url('pexels-nealsmithphotos-12510045.jpg')}  /* ① 遠景：英格蘭鄉間田野（飛越鄉村→進城）*/
+  #ph2{background-image:url('pexels-jabzee-30754134.jpg')}           /* ② 中景：塔橋（金色光）*/
+  #ph3{background-image:url('pexels-dominikagregus-672532.jpg')} /* ③ 近景：大笨鐘・國會大廈・泰晤士河 */
+  #london .grade{position:absolute;inset:0;  /* 暗角＋下方加深，讓 CTA 文字更清楚 */
+    background:radial-gradient(120% 90% at 50% 35%, transparent 40%, rgba(10,16,26,.35)),
+              linear-gradient(transparent 55%, rgba(8,12,20,.6))}
+  #cloudwipe{position:fixed;inset:0;z-index:2;pointer-events:none;opacity:0;
+    /* 冷白色雲底（非死白）+ 雲朵紋理：轉場像穿過雲層，不是畫面變白 */
+    background-color:rgba(221,231,243,.80);
+    background-image:
+      radial-gradient(48% 38% at 14% 26%, #f7faff 0%, rgba(247,250,255,0) 80%),
+      radial-gradient(52% 42% at 86% 22%, #f7faff 0%, rgba(247,250,255,0) 80%),
+      radial-gradient(58% 48% at 90% 66%, #e9f0fa 0%, rgba(233,240,250,0) 80%),
+      radial-gradient(50% 42% at 28% 80%, #e9f0fa 0%, rgba(233,240,250,0) 80%),
+      /* 中央大範圍：偏冷白，營造雲層厚度而非平白 */
+      radial-gradient(135% 120% at 50% 46%, #fbfdff 36%, rgba(214,225,239,.55) 100%);
+    background-repeat:no-repeat;will-change:opacity,background-position}
+
+  /* ── 文字覆蓋層 ── */
+  .overlay{
+    position:fixed;inset:0;z-index:3;display:flex;align-items:center;
+    justify-content:center;flex-direction:column;text-align:center;
+    pointer-events:none;opacity:0;padding:6vw;
+    will-change:opacity,transform;
+  }
+  /* reveal 段文字移到上方留白，避免壓在機身上 */
+  #ov-reveal{justify-content:flex-start;padding-top:11vh}
+  #ov-clouds h1{text-shadow:0 4px 40px rgba(60,80,110,.6)}
+  .overlay .kicker{font-size:.8rem;letter-spacing:.4em;text-transform:uppercase;
+    color:var(--accent);margin-bottom:1rem;font-weight:600}
+  .overlay h1{font-size:clamp(2.2rem,6vw,5rem);font-weight:800;line-height:1.05;
+    text-shadow:0 4px 30px rgba(0,0,0,.45)}
+  .overlay p.sub{margin-top:1.2rem;font-size:clamp(1rem,2vw,1.4rem);
+    font-weight:300;opacity:.92;text-shadow:0 2px 16px rgba(0,0,0,.5)}
+
+  /* 倫敦票價卡 */
+  #cta{pointer-events:auto}
+  .card{
+    background:rgba(255,255,255,.94);color:var(--ink);
+    border-radius:20px;padding:2rem 2.4rem;max-width:420px;width:90vw;
+    box-shadow:0 30px 80px rgba(0,0,0,.45);text-align:left;
+    backdrop-filter:blur(6px);
+  }
+  .card .route{font-size:1.05rem;color:#5b6675;font-weight:600;letter-spacing:.04em}
+  .card .price{font-size:3.2rem;font-weight:800;color:var(--brand);line-height:1;margin:.3rem 0}
+  .card .price small{font-size:1rem;font-weight:600;color:#5b6675}
+  .card .meta{font-size:.9rem;color:#5b6675;margin:.4rem 0 1.3rem}
+  .card .tag{display:inline-block;background:var(--accent);color:#3a2400;
+    font-size:.72rem;font-weight:700;padding:.3em .7em;border-radius:999px;letter-spacing:.05em;margin-bottom:.8rem}
+  .card button{
+    width:100%;border:0;background:var(--brand);color:#fff;font-size:1.05rem;
+    font-weight:700;padding:.95rem;border-radius:12px;cursor:pointer;
+    transition:transform .15s,background .15s;font-family:inherit;
+  }
+  .card button:hover{background:var(--brand-deep);transform:translateY(-2px)}
+  .card .fine{font-size:.72rem;color:#94a0b0;margin-top:.8rem;text-align:center}
+
+  /* 固定 UI */
+  .brandmark{position:fixed;top:26px;left:30px;z-index:5;font-weight:800;
+    letter-spacing:.18em;font-size:.95rem;color:#fff;mix-blend-mode:difference}
+  .scroll-hint{position:fixed;bottom:26px;left:50%;transform:translateX(-50%);
+    z-index:5;font-size:.72rem;letter-spacing:.3em;color:#fff;opacity:.7;
+    animation:bob 2s ease-in-out infinite}
+  @keyframes bob{0%,100%{transform:translate(-50%,0)}50%{transform:translate(-50%,8px)}}
+
+  /* 進度條 */
+  #progress{position:fixed;left:0;top:0;height:3px;width:0;z-index:6;
+    background:linear-gradient(90deg,var(--brand),var(--accent))}
+
+  /* CC-BY 授權標註（在倫敦段淡入）*/
+  #credit{position:fixed;bottom:12px;left:50%;transform:translateX(-50%);z-index:5;
+    font-size:.66rem;letter-spacing:.03em;color:rgba(255,255,255,.82);opacity:0;
+    pointer-events:auto;text-align:center;text-shadow:0 1px 6px rgba(0,0,0,.6)}
+  #credit a{color:inherit}
+
+  /* ════════ 手機專屬版（直式窄螢幕）════════ */
+  @media (max-width:768px){
+    /* 倫敦改用直幅空拍照，直式螢幕滿版不裁切 */
+    #ph1{background-image:url('pexels-nealsmithphotos-12510045.jpg')}  /* ① 遠景：英格蘭鄉間田野 */
+    #ph2{background-image:url('pexels-shtefutsa-18351701.jpg')}  /* ② 中景：塔橋・金絲雀碼頭（直幅）*/
+    #ph3{background-image:url('pexels-zetong-li-880728-16324758.jpg');background-position:60% center} /* ③ 近景：大笨鐘特寫（對齊鐘塔）*/
+    /* 手機舷窗：只調寬度，高度由 --ratio 自動推算，比例與桌機一致不變形 */
+    #cabin{--ow:min(86vw,340px)}
+    #ov-reveal{padding-top:14vh}
+    .overlay{padding:7vw}
+    .overlay h1{font-size:clamp(1.7rem,7.6vw,2.4rem)}  /* 窄螢幕縮小，避免單字換行 */
+    .overlay .kicker{font-size:.72rem;letter-spacing:.3em}
+    .brandmark{top:18px;left:18px;font-size:.72rem;letter-spacing:.12em}
+    .card{padding:1.6rem 1.4rem}
+    .card .price{font-size:2.7rem;line-height:1.05}
+    .card .price small{display:block;margin-top:.15rem}  /* 小字整段移到價格下方，不再半句斷行 */
+    .card .meta{font-size:.82rem}
+    #credit{font-size:.6rem;width:92vw;line-height:1.6}
+  }
+</style>
+</head>
+<body>
+  <canvas id="scene"></canvas>
+
+  <!-- 機艙舷窗（點點壁 + 多層邊框 + 氣孔）-->
+  <div id="cabin">
+    <div class="wall"></div>
+    <div class="frame"></div>
+    <div class="shade"></div>
+    <div class="shadepanel"></div>
+    <div class="vent"></div>
+  </div>
+
+  <!-- ④ 倫敦真實空拍照片蒙太奇（在雲層白場下依序替換）-->
+  <div id="london">
+    <div class="ph" id="ph1"></div>
+    <div class="ph" id="ph2"></div>
+    <div class="ph" id="ph3"></div>
+    <div class="grade"></div>
+  </div>
+  <!-- 雲層 wipe：轉場時掃過，遮住照片替換的接縫 -->
+  <div id="cloudwipe"></div>
+
+  <!-- 文字分鏡 -->
+  <div class="overlay" id="ov-intro">
+    <div class="kicker">TAIWAN AIRLINES · 台灣航空</div>
+    <h1>把窗外的風景<br>變成你的下一個故事</h1>
+    <p class="sub">向下捲動，一起飛往倫敦</p>
+  </div>
+
+  <div class="overlay" id="ov-reveal">
+    <div class="kicker">Boeing 747 · Jumbo Jet</div>
+    <h1>London Calling</h1>
+    <p class="sub">每週 14 班直飛，13 小時抵達</p>
+  </div>
+
+  <div class="overlay" id="ov-clouds">
+    <h1>穿過雲層<br>距離只剩期待</h1>
+  </div>
+
+  <div class="overlay" id="ov-cta">
+    <div class="card">
+      <span class="tag">限時促銷 · 即日起至 6/30</span>
+      <div class="route">台北 TPE ⇄ 倫敦 LHR</div>
+      <div class="price">NT$25,800 <small>起 / 來回未稅</small></div>
+      <div class="meta">出發日：2026/09–11 ｜ 經濟艙｜ 含 30kg 行李</div>
+      <button onclick="alert('前往訂位流程（原型示意）')">立即訂位 →</button>
+      <div class="fine">座位有限，售完為止。實際票價以結帳頁面為準。</div>
+    </div>
+  </div>
+
+  <div class="brandmark">TAIWAN AIRLINES</div>
+  <div class="scroll-hint" id="hint">SCROLL ↓</div>
+  <div id="progress"></div>
+  <div id="credit">Boeing 747 by <a href="https://poly.pizza/m/49CLof4tP2V" target="_blank" rel="noopener">Miha Lunar</a> · Poly Pizza · CC-BY 3.0　｜　空拍照片 <a href="https://www.pexels.com" target="_blank" rel="noopener">Pexels</a></div>
+
+  <div id="scroll-track"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.134.0/examples/js/loaders/GLTFLoader.js"></script>
+<script>
+/* ============================================================
+   SKYLINE Air — 捲動式鏡頭線原型
+   ① 機艙看出窗外 → ② 拉出看到整架飛機 → ③ 穿過雲霧 → ④ 倫敦俯視
+   全部程式生成，無需任何影片或外部素材。
+   ============================================================ */
+
+// 手機判斷：用來降低 3D 負擔、放寬鏡頭取景、改用直幅照片
+const isMobile = matchMedia('(max-width:768px)').matches;
+
+const canvas = document.getElementById('scene');
+const renderer = new THREE.WebGLRenderer({canvas, antialias:!isMobile});  // 手機關抗鋸齒省效能
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, isMobile?1.5:2)); // 手機限制解析度
+renderer.setSize(innerWidth, innerHeight);
+
+const scene = new THREE.Scene();
+scene.fog = new THREE.FogExp2(0xbcd4f0, 0.012);
+
+// 手機是直式窄螢幕 → 略加大 FOV（搭配下方鏡頭後拉，整架飛機才完整入鏡且不過度變形）
+const camera = new THREE.PerspectiveCamera(isMobile?74:55, innerWidth/innerHeight, 0.1, 2000);
+
+/* ---------- 燈光（黃金時刻調性）---------- */
+scene.add(new THREE.HemisphereLight(0xcfe6ff, 0x9c7a52, 0.9));
+const sun = new THREE.DirectionalLight(0xffd9a0, 1.4);
+sun.position.set(-30, 18, -40);
+scene.add(sun);
+
+/* ---------- ② 飛機 ----------
+   優先載入真 3D 模型 models/airplane.glb；
+   還沒放檔案（或載入失敗）時，自動用下面的程式生成飛機當 fallback。 */
+const plane = new THREE.Group();      // 外層群組：負責全機的位置/傾斜，下方鏡頭都以它為準
+const procPlane = new THREE.Group();  // 程式生成的 fallback 飛機
+plane.add(procPlane);
+
+const white = new THREE.MeshStandardMaterial({color:0xf4f7fb, metalness:.35, roughness:.5});
+const brand = new THREE.MeshStandardMaterial({color:0x6b2c92, metalness:.3, roughness:.5});
+const dark  = new THREE.MeshStandardMaterial({color:0x33414f, metalness:.6, roughness:.4});
+
+// 機身（圓柱沿 X 軸）
+const fuselage = new THREE.Mesh(new THREE.CylinderGeometry(1,1,14,28), white);
+fuselage.rotation.z = Math.PI/2;
+procPlane.add(fuselage);
+// 機鼻
+const nose = new THREE.Mesh(new THREE.ConeGeometry(1,2.4,28), white);
+nose.rotation.z = -Math.PI/2; nose.position.x = 8;
+procPlane.add(nose);
+// 主機翼
+const wing = new THREE.Mesh(new THREE.BoxGeometry(3.4,0.18,15), white);
+wing.position.set(0.5,-0.2,0);
+procPlane.add(wing);
+// 水平尾翼
+const tail = new THREE.Mesh(new THREE.BoxGeometry(1.8,0.15,6), white);
+tail.position.set(-6,0.2,0);
+procPlane.add(tail);
+// 垂直尾翼（品牌色）
+const fin = new THREE.Mesh(new THREE.BoxGeometry(2.4,2.6,0.18), brand);
+fin.position.set(-6.4,1.6,0);
+procPlane.add(fin);
+// 引擎
+[-3.5,3.5].forEach(z=>{
+  const eng = new THREE.Mesh(new THREE.CylinderGeometry(.55,.55,2.2,18), dark);
+  eng.rotation.z = Math.PI/2; eng.position.set(.8,-.9,z);
+  procPlane.add(eng);
+});
+// 機腹品牌色腰帶
+const belt = new THREE.Mesh(new THREE.CylinderGeometry(1.02,1.02,14,28,1,true), brand);
+belt.rotation.z = Math.PI/2; belt.scale.y = 0.18; belt.position.y=-0.15;
+procPlane.add(belt);
+
+plane.rotation.set(0.04, 0.5, 0.06); // 微帶動感的傾斜
+scene.add(plane);
+
+/* ---------- 載入真 3D 模型（若 models/airplane.glb 存在就取代 fallback）----------
+   下載的 GLB 請放到專案的 models/ 資料夾，命名為 airplane.glb。
+   不同模型的原始大小/朝向不一，下面三個常數可微調：              */
+const MODEL_URL      = 'models/airplane.glb';
+const MODEL_LENGTH   = 16;            // 想讓機身長度約等於這個世界單位
+const MODEL_ROTATION = [0, 0, 0];     // 若機頭方向不對，調這裡（弧度，繞 X/Y/Z）
+
+new THREE.GLTFLoader().load(MODEL_URL, (gltf)=>{
+  const model = gltf.scene;
+  // 自動置中 + 等比縮放到目標長度
+  const box = new THREE.Box3().setFromObject(model);
+  const size = box.getSize(new THREE.Vector3());
+  const center = box.getCenter(new THREE.Vector3());
+  const s = MODEL_LENGTH / Math.max(size.x, size.y, size.z);
+  model.scale.setScalar(s);
+  model.position.sub(center.multiplyScalar(s)); // 置中到原點
+  model.rotation.set(...MODEL_ROTATION);
+  plane.remove(procPlane);   // 拿掉程式生成的 fallback
+  plane.add(model);
+  console.log('[SKYLINE] 已載入真 3D 模型', MODEL_URL);
+}, undefined, (err)=>{
+  console.log('[SKYLINE] 找不到 GLB，沿用程式生成飛機（把檔案放到 models/airplane.glb 即可自動替換）');
+});
+
+/* ---------- ③ 雲層（生成柔邊貼圖 → Sprite）---------- */
+function cloudTexture(){
+  const c=document.createElement('canvas');c.width=c.height=128;
+  const g=c.getContext('2d');
+  const grd=g.createRadialGradient(64,64,4,64,64,64);
+  grd.addColorStop(0,'rgba(255,255,255,.95)');
+  grd.addColorStop(.5,'rgba(255,255,255,.55)');
+  grd.addColorStop(1,'rgba(255,255,255,0)');
+  g.fillStyle=grd;g.fillRect(0,0,128,128);
+  return new THREE.CanvasTexture(c);
+}
+const cloudTex = cloudTexture();
+const clouds = new THREE.Group();
+for(let i=0;i<(isMobile?55:140);i++){   // 手機降雲量省效能
+  const m=new THREE.Sprite(new THREE.SpriteMaterial({map:cloudTex,transparent:true,opacity:.85,depthWrite:false}));
+  const s=8+Math.random()*22;
+  m.scale.set(s,s*0.7,1);
+  m.position.set(
+    (Math.random()-0.5)*120,
+    -6 + (Math.random()-0.5)*40,
+    -10 - Math.random()*90
+  );
+  clouds.add(m);
+}
+scene.add(clouds);
+
+/* ---------- ④ 倫敦：改用真實空拍照片蒙太奇（DOM 圖層，見下方 HTML / animate）----------
+   3D 城市已移除：照片質感對得上寫實飛機，且手機更省效能。
+   照片在「雲層白場」下偷偷替換（match cut），由 animate() 依捲動進度控制。 */
+
+/* ============================================================
+   鏡頭關鍵影格：依捲動進度 0→1 在影格間插值
+   ============================================================ */
+const keys = [
+  // p,  相機位置,            注視點
+  {p:0.00, pos:[1.0,0.2,-1.15], look:[1.0,-1.2,-16]},  // ① 艙內貼窗，望向機翼與天空
+  {p:0.22, pos:[14,5,-20],      look:[0,0,0]},        // ② 拉出，整架飛機 3/4 視角
+  {p:0.42, pos:[-6,9,-30],      look:[0,0,0]},        // 繞行，雲層漸濃
+  {p:0.62, pos:[-2,16,-44],     look:[2,-4,-30]},     // ③ 鑽入雲層
+  {p:0.82, pos:[14,30,4],       look:[20,-40,40]},    // 出雲，俯衝下降
+  {p:1.00, pos:[24,46,70],      look:[22,-60,60]},    // ④ 倫敦俯視
+];
+
+// 手機：把「看整架飛機」的鏡頭往後拉（沿視線方向遠離注視點），讓寬機翼完整入鏡
+if(isMobile){
+  keys.forEach(k=>{
+    if(k.p>=0.2 && k.p<=0.45){
+      k.pos = k.pos.map((v,i)=> k.look[i] + (v-k.look[i])*1.5);
+    }
+  });
+}
+
+const tmpA=new THREE.Vector3(), tmpB=new THREE.Vector3();
+function lerp(a,b,t){return a+(b-a)*t}
+function sampleCamera(p){
+  let i=0; while(i<keys.length-2 && p>keys[i+1].p) i++;
+  const k0=keys[i], k1=keys[i+1];
+  let t=(p-k0.p)/(k1.p-k0.p); t=Math.max(0,Math.min(1,t));
+  t=t<.5?2*t*t:1-Math.pow(-2*t+2,2)/2; // ease in-out
+  camera.position.set(
+    lerp(k0.pos[0],k1.pos[0],t), lerp(k0.pos[1],k1.pos[1],t), lerp(k0.pos[2],k1.pos[2],t));
+  tmpA.set(lerp(k0.look[0],k1.look[0],t), lerp(k0.look[1],k1.look[1],t), lerp(k0.look[2],k1.look[2],t));
+  camera.lookAt(tmpA);
+}
+
+/* 背景天色：藍 → 雲白 → 暖陽 */
+const colA=new THREE.Color(0x4a86c8), colB=new THREE.Color(0xdce8f2), colC=new THREE.Color(0xf6c98a);
+const bg=new THREE.Color();
+function sampleSky(p){
+  if(p<0.5){ bg.copy(colA).lerp(colB, p/0.5); }
+  else { bg.copy(colB).lerp(colC,(p-0.5)/0.5); }
+  scene.background=bg; scene.fog.color.copy(bg);
+  // 雲層轉場最濃（加強白牆以遮住城市浮現），倫敦段散去
+  scene.fog.density = 0.010 + 0.030*Math.max(0,1-Math.abs(p-0.6)/0.32) - (p>0.85?(p-0.85)*0.05:0);
+}
+
+/* ---------- DOM 覆蓋層控制 ---------- */
+const ovIntro=document.getElementById('ov-intro');
+const ovReveal=document.getElementById('ov-reveal');
+const ovClouds=document.getElementById('ov-clouds');
+const ovCta=document.getElementById('ov-cta');
+const cabin=document.getElementById('cabin');
+const hint=document.getElementById('hint');
+const bar=document.getElementById('progress');
+const credit=document.getElementById('credit');
+const londonEl=document.getElementById('london');
+const ph1=document.getElementById('ph1'),ph2=document.getElementById('ph2'),ph3=document.getElementById('ph3');
+const cloudwipe=document.getElementById('cloudwipe');
+
+/* ④ 倫敦照片蒙太奇：三段在「雲層白場」下偷偷替換 + Ken Burns 緩慢推近 */
+function pulse(p,c,w){return Math.exp(-Math.pow((p-c)/w,2));}  // 高斯脈衝（雲層掃過的時機）
+const WIPES=[0.58,0.73,0.85];   // 三次雲層 wipe 的中心進度（也是照片替換點）；最後一道提前，讓白幕散去後照片先露出
+function updateLondon(p){
+  // 整個倫敦圖層只在抵達段才出現，避免暗角蓋住前面的 3D 場景
+  londonEl.style.opacity = Math.max(0, Math.min(1, (p-0.58)/0.04));
+  // 在每個 wipe 中心附近「平滑交叉淡入」（非瞬間硬切）→ 即使雲層邊緣沒蓋到也只是柔和溶接
+  const cf = (x,c)=>Math.max(0, Math.min(1, (x-(c-0.025))/0.05));
+  ph1.style.opacity = cf(p,WIPES[0]);
+  ph2.style.opacity = cf(p,WIPES[1]);
+  ph3.style.opacity = cf(p,WIPES[2]);
+  // Ken Burns：照片隨捲動緩慢推近，增加生命感
+  const z = 1 + Math.max(0, p-0.56) * 0.22;
+  ph1.style.transform = ph2.style.transform = ph3.style.transform = `scale(${z})`;
+  // 雲層 wipe：三次掃過並橫向飄移
+  const w = Math.max(pulse(p,WIPES[0],0.05), pulse(p,WIPES[1],0.045), pulse(p,WIPES[2],0.045));
+  cloudwipe.style.opacity = Math.min(1, w*1.18);
+  // 用 background-position 讓雲的紋理飄移（元素本體維持滿版 inset:0，永遠蓋滿、不露邊）
+  cloudwipe.style.backgroundPosition = `${(p-0.6)*220}px 0px`;
+}
+
+function band(p,a,b,f=0.06){
+  if(p<a-f||p>b+f) return 0;
+  if(p<a) return (p-(a-f))/f;
+  if(p>b) return 1-(p-b)/f;
+  return 1;
+}
+
+function updateDOM(p){
+  // 機艙窗框：開頭顯示，①→② 之間「拉開」淡出
+  const cabinVis = p<0.18 ? 1 - Math.max(0,(p-0.10)/0.08) : 0;
+  cabin.style.opacity = cabinVis;
+  cabin.style.transform = `scale(${1+ p*2.2})`;
+
+  ovIntro.style.opacity  = band(p,0.01,0.09);
+  ovIntro.style.transform= `translateY(${(1-band(p,0.01,0.09))*20}px)`;
+  ovReveal.style.opacity = band(p,0.24,0.36);
+  ovClouds.style.opacity = band(p,0.58,0.70);
+  ovCta.style.opacity    = band(p,0.92,1.0,0.04);   // 等最後白幕(0.85)散去、照片露出後才淡入
+  credit.style.opacity   = band(p,0.92,1.0,0.04);
+  hint.style.opacity = p<0.05 ? .7 : 0;
+  bar.style.width = (p*100)+'%';
+}
+
+/* ---------- 捲動進度（平滑跟隨）---------- */
+let target=0, current=0;
+function onScroll(){
+  const max=document.body.scrollHeight - innerHeight;
+  target = max>0 ? scrollY/max : 0;
+}
+addEventListener('scroll', onScroll, {passive:true});
+onScroll();
+
+let t=0;
+function animate(){
+  requestAnimationFrame(animate);
+  current += (target-current)*0.08;        // 緩動跟隨，鏡頭更滑順
+  t+=0.002;
+  sampleCamera(current);
+  sampleSky(current);
+  updateDOM(current);
+  // 飛機姿態：機艙段維持「機翼朝窗」朝向，鏡頭拉出時擺正成爬升英雄姿態
+  {
+    let tr = Math.max(0, Math.min(1, (current-0.14)/0.13));
+    tr = tr<.5?2*tr*tr:1-Math.pow(-2*tr+2,2)/2;
+    plane.rotation.set(
+      0.04 + (0.70-0.04)*tr,   // 抬頭（爬升感）
+      0.50 + (0.80-0.50)*tr,   // 轉成 3/4 視角
+      0.06 + (0.22-0.06)*tr    // 微側傾
+    );
+  }
+  clouds.children.forEach((c,i)=>{ c.position.x += Math.sin(t+i)*0.004; });
+  updateLondon(current);
+  renderer.render(scene,camera);
+}
+animate();
+
+addEventListener('resize',()=>{
+  camera.aspect=innerWidth/innerHeight; camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth,innerHeight);
+});
+</script>
+</body>
+</html>
