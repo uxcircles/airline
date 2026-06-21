@@ -1,6 +1,8 @@
 # 大型未使用的影片素材（超過 GitHub 100MB 上限、網站未使用）
 *.mp4
 *.mov
+# 白名單：壓縮後的展示影片
+!airline-demo.mp4
 
 # macOS / 編輯器
 .DS_Store
