@@ -87,6 +87,10 @@
     position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
     width:var(--ow);height:var(--oh);border-radius:44%/38%;overflow:hidden;
   }
+  #cabin .shade::before{ /* 玻璃邊緣暗角：讓窗戶有向內凹的深度感 */
+    content:"";position:absolute;inset:0;pointer-events:none;
+    background:radial-gradient(ellipse 80% 76% at 50% 50%, transparent 42%, rgba(0,0,0,.28) 100%);
+  }
   #cabin .shade::after{ /* 玻璃反光：左右寬、上下窄的橢圓高光帶 */
     content:"";position:absolute;inset:0;
     background:
@@ -124,15 +128,17 @@
     pointer-events:none;opacity:0;padding:6vw;
     will-change:opacity,transform;
   }
+  /* intro 文字置中 */
+  #ov-intro{justify-content:center}
   /* reveal 段文字移到上方留白，避免壓在機身上 */
   #ov-reveal{justify-content:flex-start;padding-top:11vh}
   #ov-clouds h1{text-shadow:0 4px 40px rgba(60,80,110,.6)}
   .overlay .kicker{font-size:.8rem;letter-spacing:.4em;text-transform:uppercase;
     color:var(--accent);margin-bottom:1rem;font-weight:600}
-  .overlay h1{font-size:clamp(2.2rem,6vw,5rem);font-weight:800;line-height:1.05;
+  .overlay h1{font-size:clamp(1.8rem,4.5vw,3.8rem);font-weight:800;line-height:1.1;
     text-shadow:0 4px 30px rgba(0,0,0,.45)}
-  .overlay p.sub{margin-top:1.2rem;font-size:clamp(1rem,2vw,1.4rem);
-    font-weight:300;opacity:.92;text-shadow:0 2px 16px rgba(0,0,0,.5)}
+  .overlay p.sub{margin-top:1rem;font-size:clamp(.9rem,1.6vw,1.2rem);
+    font-weight:300;opacity:.85;text-shadow:0 2px 16px rgba(0,0,0,.5)}
 
   /* 倫敦票價卡 */
   /* CTA 容器不可用 opacity/will-change（會建立離屏圖層、停用卡片的霧面 backdrop-filter）
@@ -193,6 +199,7 @@
     #ph3{background-image:url('pexels-zetong-li-880728-16324758.jpg');background-position:60% center} /* ③ 近景：大笨鐘特寫（對齊鐘塔）*/
     /* 手機舷窗：只調寬度，高度由 --ratio 自動推算，比例與桌機一致不變形 */
     #cabin{--ow:min(86vw,340px)}
+
     #ov-reveal{padding-top:14vh}
     .overlay{padding:7vw}
     .overlay h1{font-size:clamp(1.7rem,7.6vw,2.4rem)}  /* 窄螢幕縮小，避免單字換行 */
@@ -232,7 +239,6 @@
   <div class="overlay" id="ov-intro">
     <div class="kicker">TAIWAN AIRLINES · 台灣航空</div>
     <h1>把窗外的風景<br>變成你的下一個故事</h1>
-    <p class="sub">向下捲動，一起飛往倫敦</p>
   </div>
 
   <div class="overlay" id="ov-reveal">
@@ -259,7 +265,7 @@
   <div class="brandmark"><img src="logo.png" alt="TAIWAN AIRLINES 台灣航空"></div>
   <div class="scroll-hint" id="hint">SCROLL ↓</div>
   <div id="progress"></div>
-  <div id="credit">Boeing 747 by <a href="https://poly.pizza/m/49CLof4tP2V" target="_blank" rel="noopener">Miha Lunar</a> · Poly Pizza · CC-BY 3.0　｜　空拍照片 <a href="https://www.pexels.com" target="_blank" rel="noopener">Pexels</a></div>
+  <div id="credit">此為概念作品，非真實航空公司或航班資訊。　｜　Boeing 747 by <a href="https://poly.pizza/m/49CLof4tP2V" target="_blank" rel="noopener">Miha Lunar</a> · Poly Pizza · CC-BY 3.0　｜　空拍照片 <a href="https://www.pexels.com" target="_blank" rel="noopener">Pexels</a></div>
 
   <div id="scroll-track"></div>
 
