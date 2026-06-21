@@ -276,7 +276,7 @@
 const isMobile = matchMedia('(max-width:768px)').matches;
 
 const canvas = document.getElementById('scene');
-const renderer = new THREE.WebGLRenderer({canvas, antialias:!isMobile});  // 手機關抗鋸齒省效能
+const renderer = new THREE.WebGLRenderer({canvas, antialias:!isMobile});
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, isMobile?1.5:2)); // 手機限制解析度
 renderer.setSize(innerWidth, innerHeight);
 
@@ -354,19 +354,19 @@ new THREE.GLTFLoader().load(MODEL_URL, (gltf)=>{
   model.scale.setScalar(s);
   model.position.sub(center.multiplyScalar(s)); // 置中到原點
   model.rotation.set(...MODEL_ROTATION);
-  // 品牌塗裝 + 修正所有材質
+  // 品牌塗裝：Node-Mesh_2 為全機反光球型 overlay，無法精確限制，直接隱藏
   model.traverse(o=>{
-    if(o.isMesh && o.material){
-      if(o.material.transparent){
-        o.visible = false;   // 隱藏半透明覆蓋層（mat25），消除 Z-fighting
-        return;
-      }
-      o.material = o.material.clone();
-      o.material.depthWrite = true;
-      if(o.material.color && o.material.color.getHexString()==='595959'){
-        o.material.color.set(0x6b2c92);   // --brand 蝴蝶蘭紫
-      }
-    }
+    if(!o.isMesh) return;
+    const isArr = Array.isArray(o.material);
+    const mats  = isArr ? o.material : [o.material];
+    if(mats.some(m=>m.transparent)){ o.visible = false; return; }
+    const fixed = mats.map(m=>{
+      const mc = m.clone();
+      mc.transparent = false; mc.opacity = 1; mc.depthWrite = true; mc.alphaTest = 0;
+      if(mc.color && mc.color.getHexString()==='595959') mc.color.set(0x6b2c92);
+      return mc;
+    });
+    o.material = isArr ? fixed : fixed[0];
   });
   plane.remove(procPlane);   // 拿掉程式生成的 fallback
   plane.add(model);
