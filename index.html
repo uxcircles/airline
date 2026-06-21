@@ -41,10 +41,17 @@
     -webkit-mask:radial-gradient(ellipse calc(var(--ow)*.6) calc(var(--oh)*.57) at 50% 50%, #0000 0 86%, #000 99%);
             mask:radial-gradient(ellipse calc(var(--ow)*.6) calc(var(--oh)*.57) at 50% 50%, #0000 0 86%, #000 99%);
   }
+  #cabin .wall::after{
+    content:"";position:absolute;inset:0;pointer-events:none;
+    background:radial-gradient(ellipse 70% 70% at 50% 50%, rgba(255,195,80,.16) 0%, rgba(200,130,30,.10) 55%, transparent 85%);
+    opacity:0;transition:opacity .6s ease;
+  }
+  body.taipei #cabin .wall::after{opacity:1}
+
   /* 頂部小氣孔／遮陽板拉柄 */
   #cabin .shadepanel{ /* 遮陽板：與把手同層，蓋在銀框「之上」，深色與把手連成一體 */
-    position:absolute;left:50%;top:calc(50% - var(--oh)/2 - 55px);transform:translateX(-50%);
-    width:calc(var(--ow)*0.90);height:calc(var(--oh)*0.15);
+    position:absolute;left:50%;top:calc(50% - var(--oh)/2 - 50px);transform:translateX(-50%);
+    width:calc(var(--ow)*0.8);height:calc(var(--oh)*0.11);
     background:linear-gradient(#434a55 0%, #353c46 80%, #2c333d 91%, #555d67 96%, #2a313a 100%);
     border-radius:50% 50% 48% 48% / 99% 99% 16% 16%;   /* 上緣大圓弧，貼合窗框圓頂 */
     box-shadow:0 6px 14px rgba(0,0,0,.4);
@@ -67,21 +74,35 @@
     position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
     width:var(--ow);height:var(--oh);border-radius:44%/38%;
     box-shadow:
-      inset 0 5px 18px rgba(0,0,0,.42),               /* 玻璃內凹陰影 */
-      0 0 0 2px #1b2026,                              /* 玻璃邊密封條（深）*/
-      0 0 0 5px rgba(250,252,254,.96),                /* 最亮鉻色內環 */
-      0 0 0 13px #e2e7ed,                             /* 鉻環 */
-      0 0 0 17px #bcc4cd,                             /* 銀 */
-      0 0 0 21px #939ba5,                             /* 深銀階 */
-      0 0 0 25px #6b727c,                             /* 過渡 */
-      0 0 0 30px #4a515b,
-      0 0 0 50px #383f49,                             /* 深灰外殼 */
-      0 0 0 54px #20262e,                             /* 外殼邊緣 */
-      0 24px 55px rgba(0,0,0,.5),                     /* 投影 */
-      0 0 26px 3px rgba(205,225,250,.6),              /* 貼近窗框的亮邊 */
-      0 0 60px 10px rgba(170,200,238,.62),            /* 藍白光暈內層（更亮）*/
-      0 0 140px 40px rgba(150,182,222,.34);           /* 光暈外層擴散（畫上去，不透光，不會漏出飛機）*/
+      inset 0 5px 18px rgba(0,0,0,.42),
+      0 0 0 2px rgba(27,32,38,1),
+      0 0 0 5px rgba(250,252,254,.96),
+      0 0 0 13px rgba(226,231,237,1),
+      0 0 0 17px rgba(188,196,205,1),
+      0 0 0 21px rgba(147,155,165,1),
+      0 0 0 25px rgba(107,114,124,1),
+      0 0 0 30px rgba(74,81,91,1),
+      0 0 0 50px rgba(56,63,73,1),
+      0 0 0 54px rgba(0,0,0,.8),
+      0 24px 55px rgba(0,0,0,.5);
     border:1px solid rgba(255,255,255,.14);
+  }
+  /* 光暈獨立成單一元素，只有外光暈三層，Safari 才能正確 transition */
+  #cabin .frame-glow{
+    position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
+    width:var(--ow);height:var(--oh);border-radius:44%/38%;
+    pointer-events:none;
+    box-shadow:
+      0 0 26px 3px rgba(205,225,250,.6),
+      0 0 60px 10px rgba(170,200,238,.62),
+      0 0 140px 40px rgba(150,182,222,.34);
+    transition:box-shadow .6s ease;
+  }
+  body.taipei #cabin .frame-glow{
+    box-shadow:
+      0 0 26px 3px rgba(255,210,120,.48),
+      0 0 60px 10px rgba(240,180,85,.22),
+      0 0 140px 40px rgba(215,155,60,.10);
   }
   /* 玻璃：裁切遮陽板與反光 */
   #cabin .shade{
@@ -211,6 +232,35 @@
     .card .price small{display:block;margin-top:.15rem}  /* 小字整段移到價格下方，不再半句斷行 */
     .card .meta{font-size:.82rem}
     #credit{font-size:.6rem;width:92vw;line-height:1.6}
+  #route-toggle{top:14px;right:14px}
+  #route-toggle button{font-size:.64rem;padding:.35em .75em}
+  }
+
+  /* ── 路線切換 pill ── */
+  #route-toggle{
+    position:fixed;top:22px;right:28px;z-index:5;
+    display:flex;align-items:center;
+    background:rgba(255,255,255,.12);
+    backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
+    border:1px solid rgba(255,255,255,.22);
+    border-radius:999px;padding:4px;gap:2px;
+  }
+  #route-toggle button{
+    border:0;background:transparent;color:rgba(255,255,255,.65);
+    font-size:.7rem;font-weight:700;letter-spacing:.06em;
+    padding:.4em 1em;border-radius:999px;cursor:pointer;
+    transition:background .25s,color .25s;font-family:inherit;
+    white-space:nowrap;pointer-events:auto;
+  }
+  #route-toggle button.active{background:var(--brand);color:#fff}
+
+  /* ── 台北模式：覆蓋三張背景照片 ── */
+  body.taipei #ph1{background-image:url('images/taipei-basin.jpg')}
+  body.taipei #ph2{background-image:url('images/taiwan-coast.jpg')}
+  body.taipei #ph3{background-image:url('images/taipei-101-sunset.jpg')}
+  @media(max-width:768px){
+    body.taipei #ph2{background-image:url('images/taiwan-coast.jpg')}
+    body.taipei #ph3{background-image:url('images/taipei-101-sunset.jpg')}
   }
 </style>
 </head>
@@ -221,6 +271,7 @@
   <div id="cabin">
     <div class="wall"></div>
     <div class="frame"></div>
+    <div class="frame-glow"></div>
     <div class="shade"></div>
     <div class="shadepanel"></div>
     <div class="vent"></div>
@@ -256,7 +307,7 @@
     <div class="card">
       <span class="tag">限時促銷 · 即日起至 6/30</span>
       <div class="route">台北 TPE ⇄ 倫敦 LHR</div>
-      <div class="price">NT$25,800 <small>起 / 來回未稅</small></div>
+      <div class="price">NT$28,800 <small>起 / 來回未稅</small></div>
       <div class="meta">出發日：2026/09–11 ｜ 經濟艙｜ 含 30kg 行李</div>
       <button onclick="alert('前往訂位流程（原型示意）')">立即訂位 →</button>
       <div class="fine">座位有限，售完為止。實際票價以結帳頁面為準。</div>
@@ -267,6 +318,11 @@
   <div class="scroll-hint" id="hint">SCROLL ↓</div>
   <div id="progress"></div>
   <div id="credit">此為概念作品，非真實航空公司或航班資訊。　｜　Boeing 747 by <a href="https://poly.pizza/m/49CLof4tP2V" target="_blank" rel="noopener">Miha Lunar</a> · Poly Pizza · CC-BY 3.0　｜　空拍照片 <a href="https://www.pexels.com" target="_blank" rel="noopener">Pexels</a></div>
+
+  <div id="route-toggle">
+    <button id="btn-lon" class="active">台北 → 倫敦</button>
+    <button id="btn-tpe">倫敦 → 台北</button>
+  </div>
 
   <div id="scroll-track"></div>
 
@@ -548,6 +604,23 @@ function animate(){
   renderer.render(scene,camera);
 }
 animate();
+
+/* ── 路線切換 ── */
+const btnLon = document.getElementById('btn-lon');
+const btnTpe = document.getElementById('btn-tpe');
+const revealH1  = document.querySelector('#ov-reveal h1');
+const cardRoute = document.querySelector('.card .route');
+
+function switchRoute(dir){
+  const toLon = dir === 'london';
+  document.body.classList.toggle('taipei', !toLon);
+  revealH1.textContent  = toLon ? 'London Calling' : '台北，歡迎回家';
+  cardRoute.textContent = toLon ? '台北 TPE ⇄ 倫敦 LHR' : '倫敦 LHR ⇄ 台北 TPE';
+  btnLon.classList.toggle('active', toLon);
+  btnTpe.classList.toggle('active', !toLon);
+}
+btnLon.addEventListener('click', ()=> switchRoute('london'));
+btnTpe.addEventListener('click', ()=> switchRoute('taipei'));
 
 addEventListener('resize',()=>{
   camera.aspect=innerWidth/innerHeight; camera.updateProjectionMatrix();
