@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>TAIWAN AIRLINES — 直飛倫敦 London Calling</title>
+<link rel="icon" type="image/png" href="favicon.png">
 <style>
   :root{
     --brand:#6b2c92;      /* 品牌紫（蝴蝶蘭）*/
@@ -103,9 +104,9 @@
   #london .ph{position:absolute;inset:0;background-size:cover;background-position:center;
     opacity:0;will-change:opacity,transform;transition:opacity .12s linear}
   /* 遠 → 近：高空全景 → 塔橋中景 → 大笨鐘特寫（呼應飛機下降接近）*/
-  #ph1{background-image:url('pexels-nealsmithphotos-12510045.jpg')}  /* ① 遠景：英格蘭鄉間田野（飛越鄉村→進城）*/
-  #ph2{background-image:url('pexels-jabzee-30754134.jpg')}           /* ② 中景：塔橋（金色光）*/
-  #ph3{background-image:url('pexels-dominikagregus-672532.jpg')} /* ③ 近景：大笨鐘・國會大廈・泰晤士河 */
+  #ph1{background-image:url('images/countryside.jpg')}  /* ① 遠景：英格蘭鄉間田野（飛越鄉村→進城）*/
+  #ph2{background-image:url('images/tower-bridge.jpg')}           /* ② 中景：塔橋（金色光）*/
+  #ph3{background-image:url('images/big-ben.jpg')} /* ③ 近景：大笨鐘・國會大廈・泰晤士河 */
   #london .grade{position:absolute;inset:0;  /* 暗角＋下方加深，讓 CTA 文字更清楚 */
     background:radial-gradient(120% 90% at 50% 35%, transparent 40%, rgba(10,16,26,.35)),
               linear-gradient(transparent 55%, rgba(8,12,20,.6))}
@@ -194,9 +195,9 @@
   /* ════════ 手機專屬版（直式窄螢幕）════════ */
   @media (max-width:768px){
     /* 倫敦改用直幅空拍照，直式螢幕滿版不裁切 */
-    #ph1{background-image:url('pexels-nealsmithphotos-12510045.jpg')}  /* ① 遠景：英格蘭鄉間田野 */
-    #ph2{background-image:url('pexels-shtefutsa-18351701.jpg')}  /* ② 中景：塔橋・金絲雀碼頭（直幅）*/
-    #ph3{background-image:url('pexels-zetong-li-880728-16324758.jpg');background-position:60% center} /* ③ 近景：大笨鐘特寫（對齊鐘塔）*/
+    #ph1{background-image:url('images/countryside.jpg')}  /* ① 遠景：英格蘭鄉間田野 */
+    #ph2{background-image:url('images/tower-bridge-portrait.jpg')}  /* ② 中景：塔橋・金絲雀碼頭（直幅）*/
+    #ph3{background-image:url('images/big-ben-portrait.jpg');background-position:60% center} /* ③ 近景：大笨鐘特寫（對齊鐘塔）*/
     /* 手機舷窗：只調寬度，高度由 --ratio 自動推算，比例與桌機一致不變形 */
     #cabin{--ow:min(86vw,340px)}
 
@@ -262,7 +263,7 @@
     </div>
   </div>
 
-  <div class="brandmark"><img src="logo.png" alt="TAIWAN AIRLINES 台灣航空"></div>
+  <div class="brandmark"><img src="images/logo.png" alt="TAIWAN AIRLINES 台灣航空"></div>
   <div class="scroll-hint" id="hint">SCROLL ↓</div>
   <div id="progress"></div>
   <div id="credit">此為概念作品，非真實航空公司或航班資訊。　｜　Boeing 747 by <a href="https://poly.pizza/m/49CLof4tP2V" target="_blank" rel="noopener">Miha Lunar</a> · Poly Pizza · CC-BY 3.0　｜　空拍照片 <a href="https://www.pexels.com" target="_blank" rel="noopener">Pexels</a></div>
